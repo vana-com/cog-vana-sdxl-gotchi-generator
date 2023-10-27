@@ -221,18 +221,19 @@ class Predictor(BasePredictor):
     def predict(
         self,
         Lora_url: str = Input(
-            description="Load Lora model",
+            description="Load Lora model. The default is a style lora trained on cartoon images.",
+            default="https://replicate.delivery/pbxt/rrsB4jKvrhqKGFU7vOTT2N1ojUJ2loiMamzVN5YlucquyTcE/trained_model.tar"
         ),
         prompt: str = Input(
             description="Input prompt",
-            default="An TOK riding a rainbow unicorn",
+            default="rough crayon drawing of light-skinned man, short, wavy, sandy hair, blue eyes, smile, (alone: 1.4) on a plain white background, full body portrait, wearing cool shoes, feet visible, pupils in eyes, standing, facing straight ahead, thick outlines, colorful clothing, in the style of David Shrigley, Schoolhouse Rock, Beavis and Butthead, Bojack Horseman, Teruhiko Yumura, Gravity Falls,  Bob's Burgers,  Heta Una, attractive picture",
         ),
         negative_prompt: str = Input(
             description="Input Negative Prompt",
-            default="",
+            default="((((nudity)))) black and white, dull, garbled face, facial hair, ugly, extra people, (((signature))), (((signature)))",
         ),
         image: Path = Input(
-            description="Input image for img2img or inpaint mode",
+            description="Input image for img2img or inpaint mode. Use this image: blob:https://replicate.com/146d56cd-6017-4929-8b0b-488e1f6bf884 to",
             default=None,
         ),
         mask: Path = Input(
@@ -259,10 +260,10 @@ class Predictor(BasePredictor):
             default="K_EULER",
         ),
         num_inference_steps: int = Input(
-            description="Number of denoising steps", ge=1, le=500, default=50
+            description="Number of denoising steps", ge=1, le=500, default=25
         ),
         guidance_scale: float = Input(
-            description="Scale for classifier-free guidance", ge=1, le=50, default=7.5
+            description="Scale for classifier-free guidance", ge=1, le=50, default=12
         ),
         prompt_strength: float = Input(
             description="Prompt strength when using img2img / inpaint. 1.0 corresponds to full destruction of information in image",
@@ -271,7 +272,7 @@ class Predictor(BasePredictor):
             default=0.8,
         ),
         seed: int = Input(
-            description="Random seed. Leave blank to randomize the seed", default=None
+            description="Random seed. Use -1 to randomize the seed", default=45942
         ),
         refine: str = Input(
             description="Which refine style to use",
@@ -291,6 +292,10 @@ class Predictor(BasePredictor):
         apply_watermark: bool = Input(
             description="Applies a watermark to enable determining if an image is generated in downstream applications. If you have other provisions for generating or deploying images safely, you can use this to disable watermarking.",
             default=True,
+        ),
+        filter_nsfw: bool = Input(
+            description="Removes NSFW images from being returned. Unlikely to generate NSFW images when creating cartoon characters, recommended to keep this off.",
+            default=False,
         ),
         lora_scale: float = Input(
             description="LoRA additive scale. Only applicable on trained models.",
@@ -484,7 +489,7 @@ class Predictor(BasePredictor):
 
         output_paths = []
         for i, nsfw in enumerate(has_nsfw_content):
-            if nsfw:
+            if nsfw and filter_nsfw:
                 print(f"NSFW content detected in image {i}")
                 continue
             output_path = f"/tmp/out-{i}.png"
